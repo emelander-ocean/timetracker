@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MISSION CTRL">
+<title>MISSION CTRL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111418;
+    --surface2: #181c22;
+    --border: #1e2530;
+    --active: #00e5a0;
+    --active-dim: rgba(0,229,160,0.12);
+    --active-glow: rgba(0,229,160,0.35);
+    --amber: #ffaa00;
+    --amber-dim: rgba(255,170,0,0.1);
+    --text: #e8eaed;
+    --text-dim: #6b7585;
+    --text-mid: #9aa0ad;
+    --danger: #ff4d4d;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Barlow Condensed', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow: hidden;
+  }
+
+  /* Subtle scanline texture */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* ── TOP BANNER ───────────────────────────────── */
+  #active-banner {
+    flex-shrink: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: env(safe-area-inset-top, 12px) 16px 0;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+
+  #active-banner.has-active {
+    background: #0d1610;
+    border-bottom-color: var(--active);
+    box-shadow: 0 4px 40px rgba(0,229,160,0.08);
+  }
+
+  #active-banner::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--active), transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  #active-banner.has-active::after { opacity: 1; }
+
+  .banner-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 4px;
+  }
+
+  .banner-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  #active-banner.has-active .banner-label { color: var(--active); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #btn-report {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 4px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #btn-report:hover, #btn-report.active { border-color: var(--amber); color: var(--amber); }
+
+  #btn-add-project {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 14px;
+    width: 26px; height: 26px;
+    border-radius: 2px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  #btn-add-project:hover { border-color: var(--active); color: var(--active); }
+
+  .banner-main {
+    padding: 12px 0 16px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  #active-project-name {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    transition: color 0.3s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #active-banner.has-active #active-project-name { color: var(--active); }
+
+  #active-timer-display {
+    font-family: var(--mono);
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--text-dim);
+    transition: color 0.3s;
+    cursor: default;
+  }
+  #active-banner.has-active #active-timer-display {
+    color: var(--active);
+    text-shadow: 0 0 30px var(--active-glow);
+  }
+
+  .idle-message {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+
+  .banner-controls {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 14px;
+  }
+
+  #btn-stop {
+    flex: 1;
+    background: rgba(255,77,77,0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    padding: 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+  }
+  #btn-stop.visible { display: block; }
+  #btn-stop:active { background: rgba(255,77,77,0.25); }
+
+  /* ── SESSION INFO BAR ─────────────────────────── */
+  #session-bar {
+    flex-shrink: 0;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .session-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+  }
+
+  /* ── PROJECT LIST ─────────────────────────────── */
+  #project-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #project-list-container::-webkit-scrollbar { display: none; }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    padding: 8px 16px 4px;
+    text-transform: uppercase;
+  }
+
+  .project-row {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 64px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+    gap: 12px;
+    user-select: none;
+  }
+
+  .project-row:active { background: rgba(255,255,255,0.03); }
+
+  .project-row.is-active {
+    background: var(--active-dim);
+  }
+
+  .project-row.is-active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--active);
+    box-shadow: 2px 0 12px var(--active-glow);
+  }
+
+  .proj-indicator {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .project-row.is-active .proj-indicator {
+    background: var(--active);
+    border-color: var(--active);
+    box-shadow: 0 0 8px var(--active-glow);
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 4px var(--active-glow); }
+    50% { box-shadow: 0 0 12px var(--active-glow), 0 0 20px var(--active-glow); }
+  }
+
+  .proj-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .proj-name {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.2s;
+  }
+  .project-row.is-active .proj-name { color: var(--active); }
+
+  .proj-today {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .proj-total {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-mid);
+    flex-shrink: 0;
+  }
+  .project-row.is-active .proj-total { color: var(--active); }
+
+  .proj-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .project-row:hover .proj-actions { opacity: 1; }
+  /* Always show on touch */
+  @media (hover: none) {
+    .proj-actions { opacity: 1; }
+  }
+
+  .proj-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 6px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .proj-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .proj-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ── EMPTY STATE ─────────────────────────────── */
+  #empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 30px;
+    gap: 12px;
+    display: none;
+  }
+  #empty-state.visible { display: flex; }
+
+  .empty-icon {
+    font-size: 32px;
+    opacity: 0.3;
+  }
+
+  .empty-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  #btn-empty-add {
+    margin-top: 8px;
+    background: none;
+    border: 1px solid var(--active);
+    color: var(--active);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    padding: 10px 20px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #btn-empty-add:active { background: var(--active-dim); }
+
+  /* ── REPORT VIEW ────────────────────────────── */
+  #report-view {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  #report-view.open { transform: translateY(0); }
+
+  .report-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: env(safe-area-inset-top, 16px) 16px 0;
+  }
+
+  .report-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0 14px;
+  }
+
+  .report-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--active);
+    text-transform: uppercase;
+  }
+
+  #btn-close-report {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 5px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #btn-close-report:hover { border-color: var(--text-dim); color: var(--text); }
+
+  .report-tabs {
+    display: flex;
+    gap: 0;
+  }
+
+  .report-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 8px 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .report-tab.active { color: var(--active); border-bottom-color: var(--active); }
+
+  .report-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .report-body::-webkit-scrollbar { display: none; }
+
+  /* ── TREND CHART ────────────────────────────── */
+  .chart-container { margin-bottom: 28px; }
+
+  .chart-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .chart-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--active);
+    text-transform: uppercase;
+  }
+
+  .chart-subtitle {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* Legend */
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin-bottom: 16px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    opacity: 1;
+    transition: opacity 0.2s;
+  }
+  .legend-item.hidden { opacity: 0.3; }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  .legend-name {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+  }
+
+  /* Chart area */
+  .vchart-wrap {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .vchart-y-axis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-bottom: 28px; /* room for x labels */
+    width: 36px;
+    flex-shrink: 0;
+  }
+
+  .y-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--text-dim);
+    text-align: right;
+    padding-right: 6px;
+    line-height: 1;
+  }
+
+  .vchart-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Horizontal grid lines */
+  .vchart-grid {
+    position: absolute;
+    inset: 0;
+    bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .grid-line {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    opacity: 0.6;
+  }
+
+  /* Bars area */
+  .vchart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 180px;
+    padding-bottom: 0;
+    overflow-x: auto;
+    padding-bottom: 28px; /* room for x labels */
+    scrollbar-width: none;
+  }
+  .vchart-bars::-webkit-scrollbar { display: none; }
+
+  .bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 0;
+    position: relative;
+  }
+
+  .bar-group-inner {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 152px; /* chart height */
+  }
+
+  .vbar {
+    border-radius: 2px 2px 0 0;
+    transition: height 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.3s;
+    cursor: pointer;
+    position: relative;
+    min-height: 2px;
+  }
+  .vbar:hover { filter: brightness(1.3); }
+  .vbar.hidden-proj { opacity: 0.08; }
+
+  .bar-x-label {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    text-align: center;
+    width: 100%;
+    padding-top: 4px;
+  }
+  .bar-x-label.current { color: var(--active); }
+
+  /* Tooltip */
+  #chart-tooltip {
+    position: fixed;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 500;
+    display: none;
+    line-height: 1.8;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  #chart-tooltip.visible { display: block; }
+
+  .tt-title {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+
+  .tt-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tt-dot {
+    width: 6px; height: 6px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  .tt-val { color: var(--active); }
+
+  .report-summary {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 12px;
+  }
+
+  .summary-card-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    color: var(--active);
+  }
+
+  .summary-card-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* ── MODAL ─────────────────────────────────── */
+  #modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .modal-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--active);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .modal-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    border-radius: 3px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal-input:focus { border-color: var(--active); }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .modal-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+  }
+
+  .modal-btn.confirm {
+    background: var(--active-dim);
+    border-color: var(--active);
+    color: var(--active);
+  }
+  .modal-btn.confirm:active { background: rgba(0,229,160,0.25); }
+
+  .modal-btn.cancel {
+    background: none;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .modal-btn.cancel:active { background: rgba(255,255,255,0.05); }
+
+  /* ── TOAST ─────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-mid);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 10px 18px;
+    border-radius: 3px;
+    transition: transform 0.3s ease;
+    z-index: 300;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── CONFIRM DELETE ─────────────────────────── */
+  #confirm-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #confirm-overlay.open { display: flex; }
+
+  .confirm-box {
+    background: var(--surface);
+    border: 1px solid var(--danger);
+    border-radius: 6px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .confirm-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--danger);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .confirm-text {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text-mid);
+    margin-bottom: 18px;
+    line-height: 1.5;
+  }
+
+  .confirm-actions { display: flex; gap: 8px; }
+
+  .confirm-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+  }
+
+  .confirm-btn.delete {
+    background: rgba(255,77,77,0.1);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .confirm-btn.delete:active { background: rgba(255,77,77,0.25); }
+
+  .confirm-btn.cancel {
+    background: none;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+
+  /* ── BOTTOM SAFE AREA ────────────────────────── */
+  #bottom-safe { height: env(safe-area-inset-bottom, 0px); flex-shrink: 0; background: var(--bg); }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ACTIVE BANNER -->
+  <div id="active-banner">
+    <div class="banner-header">
+      <span class="banner-label" id="banner-status-label">// STANDBY</span>
+      <div class="header-right">
+        <button id="btn-report">REPORT</button>
+        <button id="btn-add-project" title="Add project">+</button>
+      </div>
+    </div>
+    <div class="banner-main" id="banner-main">
+      <div class="idle-message">NO ACTIVE PROJECT</div>
+    </div>
+    <div class="banner-controls">
+      <button id="btn-stop">■ STOP TIMER</button>
+    </div>
+  </div>
+
+  <!-- SESSION INFO BAR -->
+  <div id="session-bar">
+    <div class="session-stat">
+      <span class="stat-val" id="stat-today">0h 0m</span>
+      <span class="stat-label">TODAY</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="session-stat">
+      <span class="stat-val" id="stat-week">0h 0m</span>
+      <span class="stat-label">THIS WEEK</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="session-stat">
+      <span class="stat-val" id="stat-projects">0</span>
+      <span class="stat-label">PROJECTS</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="session-stat">
+      <span class="stat-val" id="stat-sessions">0</span>
+      <span class="stat-label">SESSIONS</span>
+    </div>
+  </div>
+
+  <!-- PROJECT LIST -->
+  <div id="project-list-container">
+    <div class="section-label">// PROJECTS</div>
+    <div id="project-list"></div>
+    <div id="empty-state">
+      <div class="empty-icon">◎</div>
+      <div class="empty-text">NO PROJECTS INITIALIZED<br>TAP + TO CREATE YOUR FIRST</div>
+      <button id="btn-empty-add">+ NEW PROJECT</button>
+    </div>
+  </div>
+
+  <div id="bottom-safe"></div>
+</div>
+
+<!-- REPORT VIEW -->
+<div id="report-view">
+  <div class="report-header">
+    <div class="report-title-row">
+      <span class="report-title">// TIME ANALYSIS</span>
+      <button id="btn-close-report">✕ CLOSE</button>
+    </div>
+    <div class="report-tabs">
+      <button class="report-tab active" data-period="day">DAILY</button>
+      <button class="report-tab" data-period="week">WEEKLY</button>
+      <button class="report-tab" data-period="month">MONTHLY</button>
+      <button class="report-tab" data-period="year">YEARLY</button>
+    </div>
+  </div>
+  <div class="report-body" id="report-body"></div>
+</div>
+
+<!-- ADD/RENAME MODAL -->
+<div id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">// NEW PROJECT</div>
+    <input class="modal-input" id="modal-input" type="text" placeholder="PROJECT NAME" maxlength="30" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="modal-actions">
+      <button class="modal-btn cancel" id="modal-cancel">CANCEL</button>
+      <button class="modal-btn confirm" id="modal-confirm">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">// DELETE PROJECT</div>
+    <div class="confirm-text" id="confirm-text">Delete this project and all its time data?</div>
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" id="confirm-cancel">CANCEL</button>
+      <button class="confirm-btn delete" id="confirm-delete">DELETE</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" id="toast"></div>
+
+<!-- CHART TOOLTIP -->
+<div id="chart-tooltip"></div>
+
+<script>
+// ─── DATA STORE ───────────────────────────────────────────────────────────────
+const STORE_KEY = 'missionctrl_v2';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return defaultData();
+    return JSON.parse(raw);
+  } catch { return defaultData(); }
+}
+
+function defaultData() {
+  return { projects: [], sessions: [], activeProjectId: null, activeStartTime: null };
+}
+
+function saveData() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+let data = loadData();
+
+// ─── TIMER LOGIC ──────────────────────────────────────────────────────────────
+let rafId = null;
+
+function startProject(projectId) {
+  // Stop current if any
+  if (data.activeProjectId && data.activeStartTime) {
+    commitSession(data.activeProjectId, data.activeStartTime, Date.now());
+  }
+  data.activeProjectId = projectId;
+  data.activeStartTime = Date.now();
+  saveData();
+  startRaf();
+  renderAll();
+}
+
+function stopTimer() {
+  if (data.activeProjectId && data.activeStartTime) {
+    commitSession(data.activeProjectId, data.activeStartTime, Date.now());
+    data.activeProjectId = null;
+    data.activeStartTime = null;
+    saveData();
+    stopRaf();
+    renderAll();
+    showToast('TIMER STOPPED');
+  }
+}
+
+function commitSession(projectId, start, end) {
+  const duration = end - start;
+  if (duration < 1000) return; // ignore sub-second
+  data.sessions.push({ projectId, start, end, duration });
+  saveData();
+}
+
+function startRaf() {
+  stopRaf();
+  function tick() {
+    updateBannerTimer();
+    updateProjectRows();
+    rafId = requestAnimationFrame(tick);
+  }
+  rafId = requestAnimationFrame(tick);
+}
+
+function stopRaf() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+// ─── TIME UTILS ──────────────────────────────────────────────────────────────
+function formatElapsed(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function formatShort(ms) {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (h > 0) return `${h}h ${m}m`;
+  const s = Math.floor((ms % 60000) / 1000);
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function getProjectTotal(projectId, fromMs, toMs) {
+  let total = 0;
+  for (const s of data.sessions) {
+    if (s.projectId !== projectId) continue;
+    if (s.end < fromMs || s.start > toMs) continue;
+    const start = Math.max(s.start, fromMs);
+    const end = Math.min(s.end, toMs);
+    total += end - start;
+  }
+  // Add current live if active
+  if (data.activeProjectId === projectId && data.activeStartTime) {
+    const liveStart = Math.max(data.activeStartTime, fromMs);
+    const now = Date.now();
+    if (liveStart <= now) total += now - liveStart;
+  }
+  return total;
+}
+
+function getPeriodBounds(period) {
+  const now = new Date();
+  let from;
+  if (period === 'day') {
+    from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === 'week') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - d.getDay());
+    from = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  } else if (period === 'month') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    from = new Date(now.getFullYear(), 0, 1);
+  }
+  return { from: from.getTime(), to: now.getTime() };
+}
+
+// Returns array of {from, to, label, isCurrent} buckets for trend charts
+function getTrendBuckets(period) {
+  const now = new Date();
+  const buckets = [];
+
+  if (period === 'day') {
+    // Last 14 days
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const from = d.getTime();
+      const to = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() - 1;
+      const month = d.toLocaleString('default', { month: 'short' }).toUpperCase();
+      const day = d.getDate();
+      buckets.push({ from, to, label: `${month} ${day}`, isCurrent: i === 0 });
+    }
+  } else if (period === 'week') {
+    // Last 12 weeks
+    const startOfThisWeek = new Date(now);
+    startOfThisWeek.setDate(now.getDate() - now.getDay());
+    startOfThisWeek.setHours(0,0,0,0);
+    for (let i = 11; i >= 0; i--) {
+      const wStart = new Date(startOfThisWeek);
+      wStart.setDate(wStart.getDate() - i * 7);
+      const wEnd = new Date(wStart);
+      wEnd.setDate(wStart.getDate() + 7);
+      const month = wStart.toLocaleString('default', { month: 'short' }).toUpperCase();
+      const day = wStart.getDate();
+      buckets.push({ from: wStart.getTime(), to: wEnd.getTime() - 1, label: `${month} ${day}`, isCurrent: i === 0 });
+    }
+  } else if (period === 'month') {
+    // Last 12 months
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      const label = d.toLocaleString('default', { month: 'short' }).toUpperCase();
+      buckets.push({ from: d.getTime(), to: mEnd.getTime() - 1, label, isCurrent: i === 0 });
+    }
+  } else {
+    // Last 5 years
+    for (let i = 4; i >= 0; i--) {
+      const yr = now.getFullYear() - i;
+      const from = new Date(yr, 0, 1).getTime();
+      const to = new Date(yr + 1, 0, 1).getTime() - 1;
+      buckets.push({ from, to, label: String(yr), isCurrent: i === 0 });
+    }
+  }
+  return buckets;
+}
+
+function getTotalTime(fromMs, toMs) {
+  let total = 0;
+  for (const s of data.sessions) {
+    if (s.end < fromMs || s.start > toMs) continue;
+    const start = Math.max(s.start, fromMs);
+    const end = Math.min(s.end, toMs);
+    total += end - start;
+  }
+  if (data.activeProjectId && data.activeStartTime) {
+    const liveStart = Math.max(data.activeStartTime, fromMs);
+    const now = Date.now();
+    if (liveStart <= now) total += now - liveStart;
+  }
+  return total;
+}
+
+function countSessions(fromMs, toMs) {
+  return data.sessions.filter(s => s.start >= fromMs && s.start <= toMs).length;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderBanner();
+  renderProjectList();
+  renderSessionBar();
+  if (data.activeProjectId && data.activeStartTime) startRaf();
+  else if (!data.activeProjectId) stopRaf();
+}
+
+function renderBanner() {
+  const banner = document.getElementById('active-banner');
+  const bannerMain = document.getElementById('banner-main');
+  const statusLabel = document.getElementById('banner-status-label');
+  const btnStop = document.getElementById('btn-stop');
+
+  if (data.activeProjectId) {
+    const proj = data.projects.find(p => p.id === data.activeProjectId);
+    const name = proj ? proj.name : 'UNKNOWN';
+    banner.classList.add('has-active');
+    statusLabel.textContent = '// RECORDING';
+    bannerMain.innerHTML = `
+      <div id="active-project-name">${escHtml(name)}</div>
+      <div id="active-timer-display">${formatElapsed(Date.now() - data.activeStartTime)}</div>
+    `;
+    btnStop.classList.add('visible');
+  } else {
+    banner.classList.remove('has-active');
+    statusLabel.textContent = '// STANDBY';
+    bannerMain.innerHTML = `<div class="idle-message">NO ACTIVE PROJECT</div>`;
+    btnStop.classList.remove('visible');
+  }
+}
+
+function updateBannerTimer() {
+  const el = document.getElementById('active-timer-display');
+  if (el && data.activeStartTime) {
+    el.textContent = formatElapsed(Date.now() - data.activeStartTime);
+  }
+}
+
+function updateProjectRows() {
+  for (const proj of data.projects) {
+    const el = document.getElementById(`proj-today-${proj.id}`);
+    const el2 = document.getElementById(`proj-total-${proj.id}`);
+    if (el) {
+      const { from } = getPeriodBounds('day');
+      el.textContent = 'TODAY ' + formatShort(getProjectTotal(proj.id, from, Date.now()));
+    }
+    if (el2 && data.activeProjectId === proj.id) {
+      el2.textContent = formatElapsed(Date.now() - data.activeStartTime);
+    }
+  }
+}
+
+function renderSessionBar() {
+  const dayBounds = getPeriodBounds('day');
+  const weekBounds = getPeriodBounds('week');
+  document.getElementById('stat-today').textContent = formatShort(getTotalTime(dayBounds.from, dayBounds.to));
+  document.getElementById('stat-week').textContent = formatShort(getTotalTime(weekBounds.from, weekBounds.to));
+  document.getElementById('stat-projects').textContent = data.projects.length;
+  document.getElementById('stat-sessions').textContent = data.sessions.length + (data.activeProjectId ? 1 : 0);
+}
+
+function renderProjectList() {
+  const list = document.getElementById('project-list');
+  const empty = document.getElementById('empty-state');
+
+  if (data.projects.length === 0) {
+    list.innerHTML = '';
+    empty.classList.add('visible');
+    return;
+  }
+  empty.classList.remove('visible');
+
+  const { from } = getPeriodBounds('day');
+  const now = Date.now();
+
+  list.innerHTML = data.projects.map(proj => {
+    const isActive = data.activeProjectId === proj.id;
+    const todayMs = getProjectTotal(proj.id, from, now);
+    const liveDisplay = isActive
+      ? formatElapsed(now - data.activeStartTime)
+      : formatShort(todayMs);
+
+    return `
+      <div class="project-row ${isActive ? 'is-active' : ''}" data-id="${proj.id}" id="proj-row-${proj.id}">
+        <div class="proj-indicator"></div>
+        <div class="proj-info">
+          <div class="proj-name">${escHtml(proj.name)}</div>
+          <div class="proj-today" id="proj-today-${proj.id}">TODAY ${formatShort(todayMs)}</div>
+        </div>
+        <div class="proj-total" id="proj-total-${proj.id}">${liveDisplay}</div>
+        <div class="proj-actions">
+          <button class="proj-btn" data-action="rename" data-id="${proj.id}">✎</button>
+          <button class="proj-btn danger" data-action="delete" data-id="${proj.id}">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Bind row taps
+  list.querySelectorAll('.project-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('.proj-btn')) return;
+      startProject(row.dataset.id);
+    });
+  });
+
+  list.querySelectorAll('.proj-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (btn.dataset.action === 'rename') openRenameModal(btn.dataset.id);
+      if (btn.dataset.action === 'delete') openConfirmDelete(btn.dataset.id);
+    });
+  });
+}
+
+// ─── MODALS ──────────────────────────────────────────────────────────────────
+let modalCallback = null;
+
+function openModal(title, defaultValue, callback) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-input').value = defaultValue || '';
+  modalCallback = callback;
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('modal-input').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalCallback = null;
+}
+
+function openAddModal() {
+  openModal('// NEW PROJECT', '', name => {
+    if (!name) return;
+    const proj = { id: uid(), name: name.toUpperCase(), createdAt: Date.now() };
+    data.projects.push(proj);
+    saveData();
+    renderAll();
+    showToast('PROJECT ADDED');
+  });
+}
+
+function openRenameModal(id) {
+  const proj = data.projects.find(p => p.id === id);
+  if (!proj) return;
+  openModal('// RENAME PROJECT', proj.name, name => {
+    if (!name) return;
+    proj.name = name.toUpperCase();
+    saveData();
+    renderAll();
+    showToast('PROJECT RENAMED');
+  });
+}
+
+let deleteTargetId = null;
+
+function openConfirmDelete(id) {
+  const proj = data.projects.find(p => p.id === id);
+  if (!proj) return;
+  deleteTargetId = id;
+  document.getElementById('confirm-text').textContent =
+    `Delete "${proj.name}" and all its recorded time data? This cannot be undone.`;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  deleteTargetId = null;
+}
+
+// ─── REPORT ──────────────────────────────────────────────────────────────────
+let currentPeriod = 'day';
+let hiddenProjects = new Set();
+
+// Project colors — a distinct palette
+const PROJECT_COLORS = [
+  '#00e5a0', '#ff6b6b', '#ffd166', '#06d6a0', '#118ab2',
+  '#f72585', '#7209b7', '#4cc9f0', '#ff9f1c', '#a8dadc'
+];
+
+function getProjectColor(index) {
+  return PROJECT_COLORS[index % PROJECT_COLORS.length];
+}
+
+function openReport() {
+  document.getElementById('report-view').classList.add('open');
+  document.getElementById('btn-report').classList.add('active');
+  renderReport(currentPeriod);
+}
+
+function closeReport() {
+  document.getElementById('report-view').classList.remove('open');
+  document.getElementById('btn-report').classList.remove('active');
+}
+
+function renderReport(period) {
+  currentPeriod = period;
+  document.querySelectorAll('.report-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.period === period);
+  });
+
+  const body = document.getElementById('report-body');
+
+  if (data.projects.length === 0) {
+    body.innerHTML = '<div style="margin-top:60px;text-align:center;color:var(--text-dim);font-family:var(--mono);font-size:11px;letter-spacing:0.15em;">NO DATA YET</div>';
+    return;
+  }
+
+  const buckets = getTrendBuckets(period);
+  const periodLabels = { day: 'LAST 14 DAYS', week: 'LAST 12 WEEKS', month: 'LAST 12 MONTHS', year: 'LAST 5 YEARS' };
+
+  // Find all projects that have data in ANY bucket
+  const activeProjects = data.projects.map((p, i) => ({
+    ...p,
+    color: getProjectColor(i),
+    index: i
+  })).filter(p => buckets.some(b => getProjectTotal(p.id, b.from, b.to) > 0));
+
+  // Build data matrix: buckets × projects
+  const matrix = buckets.map(b => {
+    const row = { bucket: b, totals: {} };
+    activeProjects.forEach(p => {
+      row.totals[p.id] = getProjectTotal(p.id, b.from, b.to);
+    });
+    row.grandTotal = Object.values(row.totals).reduce((a,v) => a+v, 0);
+    return row;
+  });
+
+  // Max value across all buckets for Y axis scaling
+  const maxMs = Math.max(...matrix.map(r => r.grandTotal), 1);
+  const CHART_H = 152; // px
+
+  // Y axis ticks: nice intervals in ms
+  function niceYTicks(maxMs) {
+    const maxHours = maxMs / 3600000;
+    let step;
+    if (maxHours <= 1) step = 0.25;
+    else if (maxHours <= 4) step = 1;
+    else if (maxHours <= 12) step = 2;
+    else if (maxHours <= 24) step = 4;
+    else if (maxHours <= 48) step = 8;
+    else step = Math.ceil(maxHours / 6);
+    const ticks = [];
+    for (let v = 0; v <= maxHours + step; v += step) {
+      if (v * 3600000 > maxMs * 1.15) break;
+      ticks.push(v);
+    }
+    return ticks;
+  }
+
+  const yTicks = niceYTicks(maxMs);
+  const yMax = yTicks[yTicks.length - 1] * 3600000;
+
+  // Bar width: adapt to number of buckets & projects
+  const projCount = Math.max(1, activeProjects.length);
+  const barW = Math.max(6, Math.min(18, Math.floor((300 / buckets.length / projCount) - 2)));
+
+  // Legend HTML
+  const legendHtml = activeProjects.map(p => `
+    <div class="legend-item ${hiddenProjects.has(p.id) ? 'hidden' : ''}" data-legend-id="${p.id}">
+      <div class="legend-dot" style="background:${p.color}"></div>
+      <div class="legend-name" title="${escHtml(p.name)}">${escHtml(p.name)}</div>
+    </div>
+  `).join('');
+
+  // Y-axis labels (top to bottom = max to 0)
+  const yLabelsHtml = [...yTicks].reverse().map(v => {
+    const label = v === 0 ? '0' : v < 1 ? `${Math.round(v*60)}m` : `${v}h`;
+    return `<div class="y-label">${label}</div>`;
+  }).join('');
+
+  // Grid lines
+  const gridLinesHtml = yTicks.map(() => `<div class="grid-line"></div>`).join('');
+
+  // Bar groups
+  const groupsHtml = matrix.map((row, bi) => {
+    const barsHtml = activeProjects.map(p => {
+      const ms = row.totals[p.id] || 0;
+      const h = ms > 0 ? Math.max(3, Math.round((ms / yMax) * CHART_H)) : 0;
+      const isHidden = hiddenProjects.has(p.id);
+      return `<div class="vbar ${isHidden ? 'hidden-proj' : ''}"
+        style="width:${barW}px;height:${h}px;background:${p.color};opacity:${ms===0?0.08:1}"
+        data-proj-id="${p.id}"
+        data-bucket-idx="${bi}"
+        data-ms="${ms}"
+        data-proj-name="${escHtml(p.name)}"
+        data-proj-color="${p.color}"></div>`;
+    }).join('');
+
+    return `
+      <div class="bar-group" style="min-width:${projCount*barW + (projCount-1)*2 + 12}px;position:relative">
+        <div class="bar-group-inner">${barsHtml}</div>
+        <div class="bar-x-label ${row.bucket.isCurrent ? 'current' : ''}" style="position:relative;top:0">${row.bucket.label}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Summary stats
+  const allFrom = buckets[0].from;
+  const allTo = buckets[buckets.length - 1].to;
+  const grandTotal = getTotalTime(allFrom, allTo);
+  const sessionCount = countSessions(allFrom, allTo);
+
+  body.innerHTML = `
+    <div class="chart-container">
+      <div class="chart-title-row">
+        <div class="chart-title">// TREND — ${periodLabels[period]}</div>
+        <div class="chart-subtitle">TAP LEGEND TO FILTER</div>
+      </div>
+      ${activeProjects.length > 0 ? `<div class="chart-legend">${legendHtml}</div>` : ''}
+      <div class="vchart-wrap">
+        <div class="vchart-y-axis">${yLabelsHtml}</div>
+        <div class="vchart-area">
+          <div class="vchart-grid" style="height:${CHART_H}px;position:absolute;top:0;left:0;right:0;">${gridLinesHtml}</div>
+          <div class="vchart-bars">${activeProjects.length > 0 ? groupsHtml : '<div style="color:var(--text-dim);font-family:var(--mono);font-size:11px;letter-spacing:0.1em;padding:40px 10px">NO SESSIONS YET</div>'}</div>
+        </div>
+      </div>
+    </div>
+    <div class="report-summary">
+      <div class="summary-card">
+        <div class="summary-card-val">${formatShort(grandTotal)}</div>
+        <div class="summary-card-label">TOTAL TIME</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-val">${sessionCount}</div>
+        <div class="summary-card-label">SESSIONS</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-val">${activeProjects.length}</div>
+        <div class="summary-card-label">ACTIVE PROJECTS</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-val">${sessionCount > 0 ? formatShort(grandTotal / sessionCount) : '—'}</div>
+        <div class="summary-card-label">AVG SESSION</div>
+      </div>
+    </div>
+  `;
+
+  // Bind legend toggles
+  body.querySelectorAll('.legend-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.legendId;
+      if (hiddenProjects.has(id)) hiddenProjects.delete(id);
+      else hiddenProjects.add(id);
+      renderReport(period);
+    });
+  });
+
+  // Tooltip on bars
+  const tooltip = document.getElementById('chart-tooltip');
+  body.querySelectorAll('.vbar').forEach(bar => {
+    bar.addEventListener('mouseenter', e => showBarTooltip(e, bar, matrix, activeProjects));
+    bar.addEventListener('touchstart', e => { e.preventDefault(); showBarTooltip(e.touches[0], bar, matrix, activeProjects); }, { passive: false });
+    bar.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+    bar.addEventListener('touchend', () => setTimeout(() => tooltip.classList.remove('visible'), 1500));
+  });
+}
+
+function showBarTooltip(e, bar, matrix, activeProjects) {
+  const tooltip = document.getElementById('chart-tooltip');
+  const bi = parseInt(bar.dataset.bucketIdx);
+  const row = matrix[bi];
+  if (!row) return;
+
+  const projsWithData = activeProjects.filter(p => (row.totals[p.id] || 0) > 0);
+  if (projsWithData.length === 0) return;
+
+  const rowsHtml = projsWithData.map(p => `
+    <div class="tt-row">
+      <div class="tt-dot" style="background:${p.color}"></div>
+      <span>${escHtml(p.name)}</span>
+      <span class="tt-val" style="margin-left:auto;padding-left:10px">${formatShort(row.totals[p.id])}</span>
+    </div>
+  `).join('');
+
+  tooltip.innerHTML = `<div class="tt-title">${row.bucket.label} — ${formatShort(row.grandTotal)} TOTAL</div>${rowsHtml}`;
+  tooltip.classList.add('visible');
+
+  // Position
+  const vw = window.innerWidth;
+  const left = e.clientX + 12;
+  tooltip.style.top = (e.clientY - 20) + 'px';
+  tooltip.style.left = (left + 180 > vw ? e.clientX - 195 : left) + 'px';
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+let toastTimeout = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2,10); }
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── EVENT BINDINGS ──────────────────────────────────────────────────────────
+document.getElementById('btn-add-project').addEventListener('click', openAddModal);
+document.getElementById('btn-empty-add').addEventListener('click', openAddModal);
+document.getElementById('btn-stop').addEventListener('click', stopTimer);
+document.getElementById('btn-report').addEventListener('click', openReport);
+document.getElementById('btn-close-report').addEventListener('click', closeReport);
+
+document.getElementById('modal-confirm').addEventListener('click', () => {
+  const val = document.getElementById('modal-input').value.trim();
+  if (val && modalCallback) modalCallback(val);
+  closeModal();
+});
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('modal-confirm').click();
+  if (e.key === 'Escape') closeModal();
+});
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+document.getElementById('confirm-cancel').addEventListener('click', closeConfirm);
+document.getElementById('confirm-delete').addEventListener('click', () => {
+  if (!deleteTargetId) return;
+  if (data.activeProjectId === deleteTargetId) {
+    data.activeProjectId = null;
+    data.activeStartTime = null;
+    stopRaf();
+  }
+  data.projects = data.projects.filter(p => p.id !== deleteTargetId);
+  data.sessions = data.sessions.filter(s => s.projectId !== deleteTargetId);
+  saveData();
+  closeConfirm();
+  renderAll();
+  showToast('PROJECT DELETED');
+});
+document.getElementById('confirm-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('confirm-overlay')) closeConfirm();
+});
+
+document.querySelectorAll('.report-tab').forEach(tab => {
+  tab.addEventListener('click', () => renderReport(tab.dataset.period));
+});
+
+// Handle page visibility — recalculate timer when returning
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) renderAll();
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+// Restore active timer if page was refreshed mid-session
+if (data.activeProjectId && data.activeStartTime) {
+  startRaf();
+}
+renderAll();
+</script>
+</body>
+</html>
